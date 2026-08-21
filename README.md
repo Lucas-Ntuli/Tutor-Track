@@ -2,10 +2,8 @@
 
 A scheduling/billing platform for tutoring centers, built to
 demonstrate isolated, automatically-provisioned, and **observable**
-tenant infrastructure on Azure — the architecture problem behind most
+tenant infrastructure on Azure. The architecture problem behind most
 real B2B SaaS products, not just the CRUD features on top of it.
-
-[![CI](https://img.shields.io/badge/CI-lint%20%2B%20test%20%2B%20terraform%20validate-blue)](.github/workflows/ci.yml)
 
 ## The core problem this solves
 
@@ -62,26 +60,7 @@ monitoring/
 
 ### Request flow
 
-```mermaid
-sequenceDiagram
-    participant Client
-    participant MW as Middleware<br/>(rate limit, request ID)
-    participant Sec as security.py<br/>(resolve + auth tenant)
-    participant KV as Tenant's Key Vault
-    participant DB as Tenant's SQL DB
-    participant Obs as Metrics / Traces / Logs
 
-    Client->>MW: HTTP request (X-Tenant-Id or subdomain)
-    MW->>MW: rate-limit check, bind request_id
-    MW->>Sec: resolve_tenant_from_request()
-    Sec->>KV: fetch this tenant's API key (cached 5 min)
-    KV-->>Sec: key
-    Sec-->>MW: authenticated tenant
-    MW->>DB: per-tenant SQLAlchemy session
-    DB-->>MW: query result
-    MW-->>Obs: emit metric + trace span + structured log
-    MW-->>Client: response (X-Request-Id echoed back)
-```
 
 ## How provisioning works end to end
 
