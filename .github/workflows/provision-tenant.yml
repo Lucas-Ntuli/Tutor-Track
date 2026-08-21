@@ -1,0 +1,129 @@
+name: Provision New Tenant
+
+# Triggered by the signup flow (a backend webhook would call this via
+# the GitHub API using repository_dispatch), or manually for demo
+# purposes via workflow_dispatch.
+on:
+  repository_dispatch:
+    types: [new_tenant_signup]
+  workflow_dispatch:
+    inputs:
+      tenant_name:
+        description: "URL-safe tenant identifier, e.g. brightpath-tutors"
+        required: true
+      tier:
+        description: "Pricing tier"
+        required: true
+        default: "Basic"
+
+permissions:
+  id-token: write
+  contents: write
+  pull-requests: write
+
+jobs:
+  register-tenant:
+    runs-on: ubuntu-latest
+    outputs:
+      branch: ${{ steps.branch.outputs.name }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve inputs
+        id: inputs
+        run: |
+          if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
+            echo "tenant_name=${{ github.event.client_payload.tenant_name }}" >> $GITHUB_OUTPUT
+            echo "tier=${{ github.event.client_payload.tier }}" >> $GITHUB_OUTPUT
+          else
+            echo "tenant_name=${{ github.event.inputs.tenant_name }}" >> $GITHUB_OUTPUT
+            echo "tier=${{ github.event.inputs.tier }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Append tenant to registry
+        run: |
+          python3 - <<'EOF'
+          import json
+          path = "terraform/tenants.auto.tfvars.json"
+          with open(path) as f:
+              data = json.load(f)
+          data["tenants"].append({
+              "name": "${{ steps.inputs.outputs.tenant_name }}",
+              "tier": "${{ steps.inputs.outputs.tier }}",
+          })
+          with open(path, "w") as f:
+              json.dump(data, f, indent=2)
+          EOF
+
+      - name: Create branch and open PR
+        id: branch
+        run: |
+          BRANCH="provision/${{ steps.inputs.outputs.tenant_name }}"
+          echo "name=$BRANCH" >> $GITHUB_OUTPUT
+          git config user.name "tenant-provisioner-bot"
+          git config user.email "bot@tutortrack.internal"
+          git checkout -b "$BRANCH"
+          git add terraform/tenants.auto.tfvars.json
+          git commit -m "Provision tenant: ${{ steps.inputs.outputs.tenant_name }}"
+          git push origin "$BRANCH"
+          gh pr create --title "Provision tenant: ${{ steps.inputs.outputs.tenant_name }}" \
+            --body "Automated infrastructure provisioning request. Terraform plan will run on this PR." \
+            --base main --head "$BRANCH"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  plan:
+    needs: register-tenant
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.register-tenant.outputs.branch }}
+
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init & Plan
+        working-directory: terraform
+        run: |
+          terraform init
+          terraform plan -no-color \
+            -var="sql_admin_login=${{ secrets.SQL_ADMIN_LOGIN }}" \
+            -var="sql_admin_password=${{ secrets.SQL_ADMIN_PASSWORD }}" \
+            -var="sql_aad_admin_login=${{ vars.SQL_AAD_ADMIN_LOGIN }}" \
+            -var="sql_aad_admin_object_id=${{ vars.SQL_AAD_ADMIN_OBJECT_ID }}"
+
+  # `apply` requires manual approval via a GitHub Environment protection
+  # rule - new infrastructure provisioning should never be fully silent,
+  # even when the request itself is automated end-to-end.
+  apply:
+    needs: [register-tenant, plan]
+    runs-on: ubuntu-latest
+    environment: production-provisioning
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.register-tenant.outputs.branch }}
+
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Apply
+        working-directory: terraform
+        run: |
+          terraform init
+          terraform apply -auto-approve \
+            -var="sql_admin_login=${{ secrets.SQL_ADMIN_LOGIN }}" \
+            -var="sql_admin_password=${{ secrets.SQL_ADMIN_PASSWORD }}" \
+            -var="sql_aad_admin_login=${{ vars.SQL_AAD_ADMIN_LOGIN }}" \
+            -var="sql_aad_admin_object_id=${{ vars.SQL_AAD_ADMIN_OBJECT_ID }}"

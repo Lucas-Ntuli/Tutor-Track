@@ -1,0 +1,73 @@
+name: Build & Deploy App
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "app/**"
+  workflow_dispatch: {}
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  test:
+    # Never ship an image that doesn't pass its own test suite.
+    # Duplicated from ci.yml deliberately - this job gates deployment
+    # specifically, independent of whether CI already ran on this SHA.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: app/requirements-dev.txt
+      - run: pip install -r app/requirements-dev.txt
+      - env:
+          TESTING: "true"
+          LOG_JSON: "false"
+        run: cd app && python -m pytest
+
+  build-and-deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    environment: production-deploy
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Build and push image to ACR
+        run: |
+          az acr login --name ${{ vars.ACR_NAME }}
+          docker build -t ${{ vars.ACR_NAME }}.azurecr.io/tutortrack-api:${{ github.sha }} ./app
+          docker push ${{ vars.ACR_NAME }}.azurecr.io/tutortrack-api:${{ github.sha }}
+
+      # Terraform owns the Container App's definition (identity,
+      # ingress, env vars, scaling - see terraform/main.tf). This step
+      # only swaps the running image, so CI/CD and Terraform never
+      # fight over ownership of the same resource. If this is the very
+      # first deploy after `terraform apply`, run this once manually
+      # (or re-run this workflow) to replace the bootstrap placeholder
+      # image.
+      - name: Update Container App image
+        run: |
+          az containerapp update \
+            --name tutortrack-api \
+            --resource-group tutortrack-shared-rg \
+            --image ${{ vars.ACR_NAME }}.azurecr.io/tutortrack-api:${{ github.sha }}
+
+      - name: Wait for revision to become healthy
+        run: |
+          az containerapp revision list \
+            --name tutortrack-api \
+            --resource-group tutortrack-shared-rg \
+            --query "[0].{active:properties.active,healthState:properties.healthState,trafficWeight:properties.trafficWeight}" \
+            -o table

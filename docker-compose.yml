@@ -1,0 +1,66 @@
+# Local dev / demo stack. Brings up the API plus its full monitoring
+# stack (Prometheus scraping /metrics, Grafana with the dashboard
+# pre-provisioned, Jaeger receiving traces over OTLP) with ZERO Azure
+# resources - TESTING=true makes the app seed a file-backed SQLite
+# tenant on startup (see main.py) instead of reaching for Key Vault.
+#
+# Usage:
+#   docker compose up --build
+#   curl -H "x-tenant-id: local-dev" localhost:8000/students
+#   open http://localhost:3000        # Grafana (admin/admin)
+#   open http://localhost:16686       # Jaeger trace UI
+#
+# This is a dev convenience, not a production topology - in Azure,
+# Prometheus/Jaeger are replaced by Azure Monitor managed Prometheus
+# and Application Insights (see terraform/modules/monitoring).
+
+services:
+  api:
+    build: ./app
+    ports:
+      - "8000:8000"
+    environment:
+      TESTING: "true"
+      LOG_JSON: "false"
+      ENABLE_METRICS: "true"
+      ENABLE_TRACING: "true"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "jaeger:4317"
+      REQUIRE_API_KEY: "false"
+      RATE_LIMIT_ENABLED: "true"
+      RATE_LIMIT_PER_MINUTE: "120"
+    volumes:
+      - api-data:/app/data
+    depends_on:
+      - jaeger
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    depends_on:
+      - api
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - prometheus
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.60
+    ports:
+      - "16686:16686"  # trace UI
+      - "4317:4317"    # OTLP gRPC receiver
+
+volumes:
+  api-data:

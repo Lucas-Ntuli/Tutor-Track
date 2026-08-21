@@ -1,0 +1,21 @@
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+sqlalchemy==2.0.35
+pyodbc==5.1.0
+azure-identity==1.16.1
+azure-keyvault-secrets==4.8.0
+pydantic==2.9.2
+pydantic-settings==2.5.2
+email-validator==2.2.0
+cachetools==5.5.0
+
+# --- Observability ---------------------------------------------------
+structlog==24.4.0
+prometheus-client==0.21.0
+prometheus-fastapi-instrumentator==7.0.0
+opentelemetry-api==1.27.0
+opentelemetry-sdk==1.27.0
+opentelemetry-instrumentation-fastapi==0.48b0
+opentelemetry-instrumentation-sqlalchemy==0.48b0
+opentelemetry-exporter-otlp-proto-grpc==1.27.0
+azure-monitor-opentelemetry-exporter==1.0.0b30
