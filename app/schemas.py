@@ -1,12 +1,12 @@
 from datetime import datetime
-from typing import Generic, TypeVar
+from typing import TypeVar
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
 T = TypeVar("T")
 
 
-class Page(BaseModel, Generic[T]):
+class Page[T](BaseModel):
     """Generic pagination envelope so list endpoints don't return an
     unbounded array that gets slower and larger forever as a tenant
     grows - the kind of thing that's easy to skip in a demo project

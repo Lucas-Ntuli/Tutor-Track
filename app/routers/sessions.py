@@ -1,12 +1,14 @@
 from datetime import timedelta
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
-from sqlalchemy import select, and_, func
+from typing import Annotated
 
-from deps import get_db, get_authenticated_tenant
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import and_, func, select
+from sqlalchemy.orm import Session
+
+from deps import get_authenticated_tenant, get_db
 from models import Session as TutorSession
+from observability import BOOKING_CONFLICTS, SESSIONS_BOOKED
 from schemas import Page, SessionCreate, SessionOut
-from observability import SESSIONS_BOOKED, BOOKING_CONFLICTS
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
 
@@ -14,7 +16,7 @@ router = APIRouter(prefix="/sessions", tags=["sessions"])
 @router.post("", response_model=SessionOut, status_code=201)
 def create_session(
     payload: SessionCreate,
-    db: Session = Depends(get_db),
+    db: Annotated[Session, Depends(get_db)],
     tenant: str = Depends(get_authenticated_tenant),
 ):
     # Guard against double-booking the same tutor - the kind of small
@@ -51,7 +53,7 @@ def create_session(
 
 @router.get("", response_model=Page[SessionOut])
 def list_sessions(
-    db: Session = Depends(get_db),
+    db: Annotated[Session, Depends(get_db)],
     status: str | None = Query(default=None, description="Filter by session status"),
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
@@ -72,7 +74,10 @@ def list_sessions(
 
 
 @router.post("/{session_id}/cancel", response_model=SessionOut)
-def cancel_session(session_id: int, db: Session = Depends(get_db)):
+def cancel_session(
+    session_id: int,
+    db: Annotated[Session, Depends(get_db)],
+):
     session_obj = db.get(TutorSession, session_id)
     if not session_obj:
         raise HTTPException(status_code=404, detail="Session not found")

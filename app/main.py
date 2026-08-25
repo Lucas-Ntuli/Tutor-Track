@@ -1,11 +1,11 @@
 from fastapi import FastAPI
 
 from config import get_settings
+from exceptions import register_exception_handlers
 from logging_config import configure_logging, get_logger
 from middleware import RateLimitMiddleware, RequestContextMiddleware
 from observability import instrument_app
-from exceptions import register_exception_handlers
-from routers import students, sessions, health
+from routers import health, sessions, students
 
 configure_logging()
 log = get_logger(__name__)

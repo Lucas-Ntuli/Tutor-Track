@@ -25,7 +25,7 @@ from fastapi.testclient import TestClient
 from config import get_settings
 from database import _engine_for_tenant
 from models import Base
-from tenant_context import register_test_tenant, TENANT_VAULT_MAP, _TEST_SECRETS
+from tenant_context import _TEST_SECRETS, TENANT_VAULT_MAP, register_test_tenant
 
 TEST_TENANT = "test-academy"
 

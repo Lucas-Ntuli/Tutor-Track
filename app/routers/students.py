@@ -1,6 +1,8 @@
+from typing import Annotated
+
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
-from sqlalchemy import select, func
 
 from deps import get_db
 from models import Student
@@ -10,7 +12,10 @@ router = APIRouter(prefix="/students", tags=["students"])
 
 
 @router.post("", response_model=StudentOut, status_code=201)
-def create_student(payload: StudentCreate, db: Session = Depends(get_db)):
+def create_student(
+    payload: StudentCreate,
+    db: Annotated[Session, Depends(get_db)],
+):
     student = Student(**payload.model_dump())
     db.add(student)
     db.commit()
@@ -20,7 +25,7 @@ def create_student(payload: StudentCreate, db: Session = Depends(get_db)):
 
 @router.get("", response_model=Page[StudentOut])
 def list_students(
-    db: Session = Depends(get_db),
+    db: Annotated[Session, Depends(get_db)],
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
 ):
@@ -34,7 +39,10 @@ def list_students(
 
 
 @router.get("/{student_id}", response_model=StudentOut)
-def get_student(student_id: int, db: Session = Depends(get_db)):
+def get_student(
+    student_id: int,
+    db: Annotated[Session, Depends(get_db)],
+):
     student = db.get(Student, student_id)
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")

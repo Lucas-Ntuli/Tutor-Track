@@ -13,10 +13,10 @@ during an incident, and indexes on the columns actually used to filter
 a tenant's session history grows.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
+from sqlalchemy import DateTime, ForeignKey, Index, Numeric, String, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
-from sqlalchemy import String, ForeignKey, DateTime, Numeric, Index, func
 
 
 class Base(DeclarativeBase):
@@ -24,7 +24,7 @@ class Base(DeclarativeBase):
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 class Student(Base):

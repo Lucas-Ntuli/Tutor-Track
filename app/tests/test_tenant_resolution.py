@@ -6,6 +6,7 @@ def test_unknown_tenant_returns_404(unknown_tenant_client):
 
 def test_missing_tenant_header_returns_404():
     from fastapi.testclient import TestClient
+
     from main import app
 
     resp = TestClient(app).get("/students")

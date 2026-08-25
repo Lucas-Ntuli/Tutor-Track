@@ -15,13 +15,12 @@ Cache-miss fetch latency is recorded to the
 vault shows up on a dashboard instead of just as vague p99 latency.
 """
 
-import os
 import time
 
-from cachetools import TTLCache
-from azure.identity import ManagedIdentityCredential, DefaultAzureCredential
+from azure.identity import DefaultAzureCredential, ManagedIdentityCredential
 from azure.keyvault.secrets import SecretClient
-from fastapi import Request, HTTPException
+from cachetools import TTLCache
+from fastapi import HTTPException, Request
 
 from config import get_settings
 from logging_config import get_logger
