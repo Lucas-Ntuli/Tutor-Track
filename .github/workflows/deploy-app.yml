@@ -60,14 +60,14 @@ jobs:
       - name: Update Container App image
         run: |
           az containerapp update \
-            --name tutortrack-api \
-            --resource-group tutortrack-shared-rg \
+            --name tutor-track-app \
+            --resource-group Tutor-Track-Rg \
             --image ${{ vars.ACR_NAME }}.azurecr.io/tutortrack-api:${{ github.sha }}
 
       - name: Wait for revision to become healthy
         run: |
           az containerapp revision list \
-            --name tutortrack-api \
-            --resource-group tutortrack-shared-rg \
+            --name tutor-track-app \
+            --resource-group Tutor-Track-RG \
             --query "[0].{active:properties.active,healthState:properties.healthState,trafficWeight:properties.trafficWeight}" \
             -o table
