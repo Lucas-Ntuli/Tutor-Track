@@ -1,0 +1,11 @@
+# Local Prometheus config used by docker-compose.yml. In Azure this
+# role is played by Azure Monitor managed Prometheus scraping the same
+# /metrics endpoint - this file is for local dev / demoing the metrics
+# without any Azure resources.
+global:
+  scrape_interval: 10s
+
+scrape_configs:
+  - job_name: tutortrack-api
+    static_configs:
+      - targets: ["api:8000"]
