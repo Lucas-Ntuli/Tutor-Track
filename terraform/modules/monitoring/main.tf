@@ -105,7 +105,6 @@ resource "azurerm_monitor_metric_alert" "high_response_latency" {
 # --- Shared SQL server health --------------------------------------------
 
 resource "azurerm_monitor_metric_alert" "sql_dtu_pressure" {
-  count               = var.sql_server_id != null ? 1 : 0
   name                = "tutortrack-sql-dtu-pressure-${var.environment}"
   resource_group_name = var.resource_group_name
   scopes              = [var.sql_server_id]
