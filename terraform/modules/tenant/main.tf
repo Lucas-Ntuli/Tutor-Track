@@ -26,7 +26,7 @@ variable "sku_tier" {
 
 locals {
   tenant_slug = lower(substr(replace(var.tenant_name, "_", ""), 0, 10))
-  name_suffix = substr(md5(var.tenant_name), 0, 6) 
+  name_suffix = substr(md5(var.tenant_name), 0, 6)
 }
 
 resource "azurerm_resource_group" "tenant" {
