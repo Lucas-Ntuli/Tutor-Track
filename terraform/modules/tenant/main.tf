@@ -24,6 +24,11 @@ variable "sku_tier" {
   default     = "Basic"
 }
 
+locals {
+  tenant_slug = lower(substr(replace(var.tenant_name, "_", ""), 0, 10))
+  name_suffix = substr(md5(var.tenant_name), 0, 6) 
+}
+
 resource "azurerm_resource_group" "tenant" {
   name     = "tt-${var.tenant_name}-rg"
   location = var.location
@@ -53,7 +58,7 @@ resource "azurerm_mssql_database" "tenant" {
 # connection string in config - it fetches it at runtime from the
 # vault scoped to that tenant, using its managed identity.
 resource "azurerm_key_vault" "tenant" {
-  name                       = "tt-${substr(var.tenant_name, 0, 10)}-kv"
+  name                       = "tt-${local.tenant_slug}${local.name_suffix}kv"
   location                   = azurerm_resource_group.tenant.location
   resource_group_name        = azurerm_resource_group.tenant.name
   sku_name                   = "standard"
@@ -86,7 +91,7 @@ resource "azurerm_key_vault_secret" "connection_string" {
 # --- Dedicated blob container per tenant, for uploaded files
 # (worksheets, invoices) - same isolation principle as the database.
 resource "azurerm_storage_account" "tenant" {
-  name                     = "tt${replace(substr(var.tenant_name, 0, 15), "-", "")}sa"
+  name                     = "tt${local.tenant_slug}${local.name_suffix}sa"
   resource_group_name      = azurerm_resource_group.tenant.name
   location                 = azurerm_resource_group.tenant.location
   account_tier             = "Standard"
