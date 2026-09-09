@@ -25,7 +25,7 @@ variable "sku_tier" {
 }
 
 locals {
-  tenant_slug = lower(substr(replace(var.tenant_name, "_", ""), 0, 10))
+  tenant_slug = lower(substr(replace(var.tenant_name, "-", ""), 0, 10))
   name_suffix = substr(md5(var.tenant_name), 0, 6)
 }
 
@@ -107,7 +107,7 @@ resource "azurerm_storage_account" "tenant" {
 
 resource "azurerm_storage_container" "tenant_files" {
   name                  = "tenant-files"
-  storage_account_name  = azurerm_storage_account.tenant.name
+  storage_account_id    = azurerm_storage_account.tenant.id
   container_access_type = "private"
 }
 
