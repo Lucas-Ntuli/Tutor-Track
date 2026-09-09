@@ -44,13 +44,17 @@ jobs:
         run: |
           python3 - <<'EOF'
           import json
+
           path = "terraform/tenants.auto.tfvars.json"
+
           with open(path) as f:
               data = json.load(f)
+
           data["tenants"].append({
               "name": "${{ steps.inputs.outputs.tenant_name }}",
               "tier": "${{ steps.inputs.outputs.tier }}",
           })
+          
           with open(path, "w") as f:
               json.dump(data, f, indent=2)
           EOF
@@ -96,7 +100,7 @@ jobs:
           reconcile() {
             local address="$1"
             local rg_name="$2"
-            if terraform state list | grep -qF "$address"; then
+            if terraform state list 2>/dev/null | grep -qF "$address"; then
               echo "SKIP (already in state): $address"
               return
             fi
@@ -107,13 +111,12 @@ jobs:
                 -var="sql_admin_password=${{ secrets.SQL_ADMIN_PASSWORD }}" \
                 -var="sql_aad_admin_login=${{ vars.SQL_AAD_ADMIN_LOGIN }}" \
                 -var="sql_aad_admin_object_id=${{ vars.SQL_AAD_ADMIN_OBJECT_ID }}" \
-                "$address" "/subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/resourceGroups/$rg_name"
-                > /tmp/import.log 2>&1, then
-                echo "  -> imported ok
-            else 
-              echo "   -> import FAILED, see details below:"
-              tail -20 /tmp/import.lo
-            fi
+                "$address" "/subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/resourceGroups/$rg_name" > /tmp/import.log 2>&1; then
+                echo " -> imported OK"
+               else
+                 echo " -> import FAILED, see details below:"
+                 tail -20 /tmp/import.log
+              fi
             else
               echo "SKIP (doesn't exist yet, Terraform will create it): $rg_name"
             fi
