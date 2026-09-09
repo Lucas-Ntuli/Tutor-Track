@@ -107,7 +107,7 @@ resource "azurerm_storage_account" "tenant" {
 
 resource "azurerm_storage_container" "tenant_files" {
   name                  = "tenant-files"
-  storage_account_name    = azurerm_storage_account.tenant.name
+  storage_account_name  = azurerm_storage_account.tenant.name
   container_access_type = "private"
 }
 
