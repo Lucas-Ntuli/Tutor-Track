@@ -1,5 +1,10 @@
 variable "location" {
   type    = string
+  default = "eastus"
+}
+
+variable "sql_location" {
+  type    = string
   default = "eastus2"
 }
 
