@@ -41,12 +41,18 @@ resource "azurerm_resource_group" "shared" {
   }
 }
 
+resource "random_string" "sql_suffix" {
+  length  = 4
+  special = false
+  upper   = false
+}
+
 # One logical SQL server hosts every tenant's dedicated database.
 # Isolation happens at the DATABASE level, not the server level -
 # a reasonable middle ground between per-tenant servers (expensive,
 # operationally heavy) and shared-schema (no real isolation).
 resource "azurerm_mssql_server" "shared" {
-  name                         = "tutortrack-sql-${var.environment}"
+  name                         = "tutortrack-sql-${var.environment}-${random_string.sql_suffix.result}"
   resource_group_name          = azurerm_resource_group.shared.name
   location                     = var.sql_location
   version                      = "12.0"
