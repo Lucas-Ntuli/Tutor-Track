@@ -5,7 +5,7 @@ variable "location" {
 
 variable "sql_location" {
   type    = string
-  default = "eastus2"
+  default = "centralus"
 }
 
 variable "environment" {
