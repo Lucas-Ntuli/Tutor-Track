@@ -6,6 +6,10 @@ terraform {
       source  = "hashicorp/azurerm"
       version = "~> 3.90"
     }
+    random = {
+      source = "hashicorp/random"
+      version = "~> 3.6"
+    }
   }
 
   backend "azurerm" {
@@ -31,6 +35,10 @@ data "azurerm_client_config" "current" {}
 resource "azurerm_resource_group" "shared" {
   name     = "tutortrack-shared-rg"
   location = var.location
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 # One logical SQL server hosts every tenant's dedicated database.

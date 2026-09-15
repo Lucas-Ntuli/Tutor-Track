@@ -26,7 +26,14 @@ variable "sku_tier" {
 
 locals {
   tenant_slug = lower(substr(replace(var.tenant_name, "-", ""), 0, 10))
-  name_suffix = substr(md5(var.tenant_name), 0, 6)
+  name_suffix = random_string.kv_suffix.result
+}
+
+resource "random_string" "kv_suffix" {
+  length = 6
+  special = false
+  upper = false
+  numeric = true
 }
 
 resource "azurerm_resource_group" "tenant" {
