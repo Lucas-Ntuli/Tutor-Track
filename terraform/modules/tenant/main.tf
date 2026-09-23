@@ -72,6 +72,7 @@ resource "azurerm_key_vault" "tenant" {
   tenant_id                  = data.azurerm_client_config.current.tenant_id
   purge_protection_enabled   = true
   soft_delete_retention_days = 7
+  enable_rbac_authorization  = true
 
   tags = {
     tenant = var.tenant_name
@@ -87,12 +88,21 @@ resource "azurerm_role_assignment" "app_reads_tenant_secrets" {
   principal_id         = var.app_managed_identity_principal_id
 }
 
+resource "azurerm_role_assignment" "pipeline_manages_tenant_secrets" {
+  scope                = azurerm_key_vault.tenant.id
+  role_definition_name = "Key Vault Secrets Officer"
+  principal_id         = data.azurerm_client_config.current.object_id
+}
+
 resource "azurerm_key_vault_secret" "connection_string" {
   name         = "db-connection-string"
   key_vault_id = azurerm_key_vault.tenant.id
   value        = "Server=${var.sql_server_id};Database=${azurerm_mssql_database.tenant.name};Authentication=Active Directory Managed Identity;"
 
-  depends_on = [azurerm_role_assignment.app_reads_tenant_secrets]
+  depends_on = [
+    azurerm_role_assignment.app_reads_tenant_secrets,
+    azurerm_role_assignment.pipeline_manages_tenant_secrets
+  ]
 }
 
 # --- Dedicated blob container per tenant, for uploaded files
