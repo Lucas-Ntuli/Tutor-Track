@@ -119,6 +119,12 @@ resource "azurerm_monitor_metric_alert" "sql_dtu_pressure" {
     aggregation      = "Average"
     operator         = "GreaterThan"
     threshold        = var.dtu_alert_threshold_percent
+
+    dimension {
+      name = "DatabaseResourceId"
+      operator = "Include"
+      values = ["*"]
+   }
   }
 
   action {
