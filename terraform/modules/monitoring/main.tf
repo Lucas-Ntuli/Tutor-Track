@@ -121,10 +121,10 @@ resource "azurerm_monitor_metric_alert" "sql_dtu_pressure" {
     threshold        = var.dtu_alert_threshold_percent
 
     dimension {
-      name = "DatabaseResourceId"
+      name     = "DatabaseResourceId"
       operator = "Include"
-      values = ["*"]
-   }
+      values   = ["*"]
+    }
   }
 
   action {
