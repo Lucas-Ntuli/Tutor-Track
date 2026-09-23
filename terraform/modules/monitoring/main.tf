@@ -105,13 +105,15 @@ resource "azurerm_monitor_metric_alert" "high_response_latency" {
 # --- Shared SQL server health --------------------------------------------
 
 resource "azurerm_monitor_metric_alert" "sql_dtu_pressure" {
-  name                = "tutortrack-sql-dtu-pressure-${var.environment}"
-  resource_group_name = var.resource_group_name
-  scopes              = [var.sql_server_id]
-  description         = "A tenant database is running hot on DTU. Since databases are isolated per tenant, this points at ONE noisy tenant, not a systemic issue - check per-database metrics to identify which."
-  severity            = 2
-  frequency           = "PT5M"
-  window_size         = "PT15M"
+  name                     = "tutortrack-sql-dtu-pressure-${var.environment}"
+  resource_group_name      = var.resource_group_name
+  scopes                   = [var.sql_server_id]
+  target_resource_type     = "Microsoft.Sql/servers/databases"
+  target_resource_location = var.location
+  description              = "A tenant database is running hot on DTU. Since databases are isolated per tenant, this points at ONE noisy tenant, not a systemic issue - check per-database metrics to identify which."
+  severity                 = 2
+  frequency                = "PT5M"
+  window_size              = "PT15M"
 
   criteria {
     metric_namespace = "Microsoft.Sql/servers/databases"
